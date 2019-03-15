@@ -7,6 +7,9 @@
  * 2015/02/01 by Roman Stets <romko.stets@gmail.com>
  * @todo make use of i2c.stream
  *
+ * Replaced dependence on 'i2c' module by 'raspi-i2c' module
+ * 2019/03/15 by David Linner <david.linner@srh.de>
+ *
  * Changelog:
  *     XX - ToDo...
  */
@@ -33,15 +36,17 @@
 // THE SOFTWARE.
 //================================================================================================
 
-var i2c = require('i2c');
+//var i2c = require('i2c');
+
+const raspi = require('raspi');
+const {I2C} = require('raspi-i2c');
 
 /**
  * Default constructor, uses default I2C address or default SS Pin if SPI
  * @see MPU6050.DEFAULT_ADDRESS
  */
-function MPU6050(device, address) {
-  this.device = device || '/dev/i2c-1';
-  this.address = address || MPU6050.DEFAULT_ADDRESS;
+function MPU6050(address) {
+    this.address = address || MPU6050.DEFAULT_ADDRESS;
 }
 
 MPU6050.ADDRESS_AD0_LOW = 0x68; // address pin low (GND); default for InvenSense evaluation board
@@ -57,12 +62,13 @@ MPU6050.DEFAULT_ADDRESS = MPU6050.ADDRESS_AD0_LOW;
  * the default internal clock source.
  */
 MPU6050.prototype.initialize = function() {
-  this.i2cdev = new I2cDev(this.address, {device : this.device});
-  
-  this.setClockSource(MPU6050.CLOCK_PLL_XGYRO);
-  this.setFullScaleGyroRange(MPU6050.GYRO_FS_250);
-  this.setFullScaleAccelRange(MPU6050.ACCEL_FS_2);
-  this.setSleepEnabled(false);
+    this.i2cdev = new I2cDev(this.address);
+    raspi.init(() => {
+        this.setClockSource(MPU6050.CLOCK_PLL_XGYRO);
+        this.setFullScaleGyroRange(MPU6050.GYRO_FS_250);
+        this.setFullScaleAccelRange(MPU6050.ACCEL_FS_2);
+        this.setSleepEnabled(false);
+    });
 };
 
 /**
@@ -71,13 +77,13 @@ MPU6050.prototype.initialize = function() {
  * @param callback
  */
 MPU6050.prototype.testConnection = function(callback) {
-  this.getDeviceID(function (err, data) {
-    if (err) {
-      return callback(err);
-    }
-    // Test device id.
-    callback(null, data === 0x34);
-  }); // ;
+    this.getDeviceID(function (err, data) {
+        if (err) {
+            return callback(err);
+        }
+        // Test device id.
+        callback(null, data === 0x34);
+    }); // ;
 };
 
 // WHO_AM_I register
@@ -93,7 +99,7 @@ MPU6050.WHO_AM_I_LENGTH = 6;
  * @return Device ID (should be 0x68, 104 dec, 150 oct)
  */
 MPU6050.prototype.getDeviceID = function(callback) {
-  this.i2cdev.readBits(MPU6050.RA_WHO_AM_I, MPU6050.WHO_AM_I_BIT, MPU6050.WHO_AM_I_LENGTH, callback);
+    this.i2cdev.readBits(MPU6050.RA_WHO_AM_I, MPU6050.WHO_AM_I_BIT, MPU6050.WHO_AM_I_LENGTH, callback);
 };
 
 /**
@@ -104,7 +110,7 @@ MPU6050.prototype.getDeviceID = function(callback) {
  * @see getDeviceID()
  */
 MPU6050.prototype.setDeviceID = function(id) {
-  this.i2cdev.writeBits(MPU6050.RA_WHO_AM_I, MPU6050.WHO_AM_I_BIT, MPU6050.WHO_AM_I_LENGTH, id);
+    this.i2cdev.writeBits(MPU6050.RA_WHO_AM_I, MPU6050.WHO_AM_I_BIT, MPU6050.WHO_AM_I_LENGTH, id);
 };
 
 // GYRO_CONFIG register
@@ -132,7 +138,7 @@ MPU6050.GYRO_FS_2000 = 0x03;
  * @param callback
  */
 MPU6050.prototype.getFullScaleGyroRange = function(callback) {
-  this.i2cdev.readBits(MPU6050.RA_GYRO_CONFIG, MPU6050.GCONFIG_FS_SEL_BIT, MPU6050.GCONFIG_FS_SEL_LENGTH, callback);
+    this.i2cdev.readBits(MPU6050.RA_GYRO_CONFIG, MPU6050.GCONFIG_FS_SEL_BIT, MPU6050.GCONFIG_FS_SEL_LENGTH, callback);
 };
 
 /**
@@ -145,7 +151,7 @@ MPU6050.prototype.getFullScaleGyroRange = function(callback) {
  * @see MPU6050_GCONFIG_FS_SEL_LENGTH
  */
 MPU6050.prototype.setFullScaleGyroRange = function(range) {
-  this.i2cdev.writeBits(MPU6050.RA_GYRO_CONFIG, MPU6050.GCONFIG_FS_SEL_BIT, MPU6050.GCONFIG_FS_SEL_LENGTH, range);
+    this.i2cdev.writeBits(MPU6050.RA_GYRO_CONFIG, MPU6050.GCONFIG_FS_SEL_BIT, MPU6050.GCONFIG_FS_SEL_LENGTH, range);
 };
 
 // ACCEL_CONFIG register
@@ -173,7 +179,7 @@ MPU6050.ACCEL_FS_16 = 0x03;
  * @param callback
  */
 MPU6050.prototype.getFullScaleAccelRange = function(callback) {
-  this.i2cdev.readBits(MPU6050.RA_ACCEL_CONFIG, MPU6050.ACONFIG_AFS_SEL_BIT, MPU6050.ACONFIG_AFS_SEL_LENGTH, callback);
+    this.i2cdev.readBits(MPU6050.RA_ACCEL_CONFIG, MPU6050.ACONFIG_AFS_SEL_BIT, MPU6050.ACONFIG_AFS_SEL_LENGTH, callback);
 };
 
 /**
@@ -182,7 +188,7 @@ MPU6050.prototype.getFullScaleAccelRange = function(callback) {
  * @see getFullScaleAccelRange()
  */
 MPU6050.prototype.setFullScaleAccelRange = function(range) {
-  this.i2cdev.writeBits(MPU6050.RA_ACCEL_CONFIG, MPU6050.ACONFIG_AFS_SEL_BIT, MPU6050.ACONFIG_AFS_SEL_LENGTH, range);
+    this.i2cdev.writeBits(MPU6050.RA_ACCEL_CONFIG, MPU6050.ACONFIG_AFS_SEL_BIT, MPU6050.ACONFIG_AFS_SEL_LENGTH, range);
 };
 
 // ACCEL_*OUT_* registers
@@ -229,15 +235,15 @@ MPU6050.RA_ACCEL_ZOUT_L = 0x40;
  * @param callback
  */
 MPU6050.prototype.getAcceleration = function(callback) {
-  this.i2cdev.readBytes(MPU6050.RA_ACCEL_XOUT_H, 6, function(err, buffer){
-    if (err) return callback(err);
+    this.i2cdev.readBytes(MPU6050.RA_ACCEL_XOUT_H, 6, function(err, buffer){
+        if (err) return callback(err);
 
-    callback(null, [
-      buffer.readInt16BE(0),
-      buffer.readInt16BE(2),
-      buffer.readInt16BE(4)
-    ]);
-  });
+        callback(null, [
+            buffer.readInt16BE(0),
+            buffer.readInt16BE(2),
+            buffer.readInt16BE(4)
+        ]);
+    });
 };
 
 /**
@@ -248,18 +254,18 @@ MPU6050.prototype.getAcceleration = function(callback) {
  * @param callback
  */
 MPU6050.prototype.getMotion6 = function(callback) {
-  this.i2cdev.readBytes(MPU6050.RA_ACCEL_XOUT_H, 14, function(err, buffer){
-    if (err) return callback(err);
+    this.i2cdev.readBytes(MPU6050.RA_ACCEL_XOUT_H, 14, function(err, buffer){
+        if (err) return callback(err);
 
-    callback(null, [
-      buffer.readInt16BE(0),
-      buffer.readInt16BE(2),
-      buffer.readInt16BE(4),
-      buffer.readInt16BE(8),
-      buffer.readInt16BE(10),
-      buffer.readInt16BE(12)
-    ]);
-  });
+        callback(null, [
+            buffer.readInt16BE(0),
+            buffer.readInt16BE(2),
+            buffer.readInt16BE(4),
+            buffer.readInt16BE(8),
+            buffer.readInt16BE(10),
+            buffer.readInt16BE(12)
+        ]);
+    });
 };
 
 // GYRO_*OUT_* registers
@@ -302,10 +308,10 @@ MPU6050.RA_GYRO_ZOUT_L = 0x48;
  * @see getMotion6()
  */
 MPU6050.prototype.getRotation = function(callback) {
-   this.i2cdev.readBytes(MPU6050.RA_GYRO_XOUT_H, 6, function(err, buffer){
-     if (err) return callback(err);
-     callback(null, [buffer.readInt16BE(0), buffer.readInt16BE(2), buffer.readInt16BE(4)]);
-   });
+    this.i2cdev.readBytes(MPU6050.RA_GYRO_XOUT_H, 6, function(err, buffer){
+        if (err) return callback(err);
+        callback(null, [buffer.readInt16BE(0), buffer.readInt16BE(2), buffer.readInt16BE(4)]);
+    });
 };
 
 
@@ -331,7 +337,7 @@ MPU6050.PWR1_CLKSEL_LENGTH = 3;
  * @see MPU6050_PWR1_SLEEP_BIT
  */
 MPU6050.prototype.getSleepEnabled = function(callback) {
-  this.i2cdev.readBit(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_SLEEP_BIT, callback);
+    this.i2cdev.readBit(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_SLEEP_BIT, callback);
 };
 
 /** Set sleep mode status.
@@ -341,7 +347,7 @@ MPU6050.prototype.getSleepEnabled = function(callback) {
  * @see MPU6050_PWR1_SLEEP_BIT
  */
 MPU6050.prototype.setSleepEnabled = function(enabled) {
-  this.i2cdev.writeBit(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_SLEEP_BIT, enabled);
+    this.i2cdev.writeBit(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_SLEEP_BIT, enabled);
 };
 
 /**
@@ -349,7 +355,7 @@ MPU6050.prototype.setSleepEnabled = function(enabled) {
  * @param callback
  */
 MPU6050.prototype.getClockSource = function (callback) {
-  this.i2cdev.readBits(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_CLKSEL_BIT, MPU6050.PWR1_CLKSEL_LENGTH, callback);
+    this.i2cdev.readBits(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_CLKSEL_BIT, MPU6050.PWR1_CLKSEL_LENGTH, callback);
 };
 
 /**
@@ -381,7 +387,7 @@ MPU6050.prototype.getClockSource = function (callback) {
  * @see getClockSource()
  */
 MPU6050.prototype.setClockSource = function(source) {
-  this.i2cdev.writeBits(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_CLKSEL_BIT, MPU6050.PWR1_CLKSEL_LENGTH, source);
+    this.i2cdev.writeBits(MPU6050.RA_PWR_MGMT_1, MPU6050.PWR1_CLKSEL_BIT, MPU6050.PWR1_CLKSEL_LENGTH, source);
 };
 
 // TEMP_*OUT_* register
@@ -399,50 +405,57 @@ MPU6050.prototype.getTemperature = function(callback) {
     });
 };
 
-module.exports = MPU6050;
+
+function bitMask(bit, bitLength) {
+    return ((1 << bitLength) - 1) << (1 + bit - bitLength);
+}
 
 /**
  * This class extends the i2c library with some extra functionality available
  * in the i2cdev library that the MPU60X0 library uses.
  */
-function I2cDev(address, options) {
-  i2c.call(this, address, options);
+class I2cDev extends I2C {
+    constructor(address) {
+        super();
+        this.address = address;
+    }
+
+    readBits(func, bit, bitLength, callback) {
+        const mask = bitMask(bit, bitLength);
+
+        this.read(this.address, func, 1, function (err, buf) {
+            const bits = (buf[0] & mask) >> (1 + bit - bitLength);
+            callback(err, bits);
+        });
+    }
+
+    readBit(func, bit, bitLength, callback) {
+        this.readBits(func, bit, 1, callback);
+    }
+
+    writeBits(func, bit, bitLength, value) {
+        const self = this;
+        this.read(this.address, func, 1, function (err, oldValue) {
+            const mask = bitMask(bit, bitLength);
+            const newValue = oldValue ^ ((oldValue ^ (value << bit)) & mask);
+            self.write(self.address, func, Buffer.from([newValue]), function (err) {
+                if (err) {
+                    throw err;
+                }
+            });
+        });
+    }
+
+    writeBit(func, bit, value) {
+        this.writeBits(func, bit, 1, value);
+    }
+
+    readBytes(register, length, cb) {
+        this.read(this.address, register, length, cb);
+    }
 }
 
-I2cDev.prototype = Object.create(i2c.prototype);
-I2cDev.prototype.constructor = I2cDev;
+module.exports = MPU6050;
 
-I2cDev.prototype.bitMask = function(bit, bitLength) {
-  return ((1 << bitLength) - 1) << (1 + bit - bitLength);
-};
 
-I2cDev.prototype.readBits = function(func, bit, bitLength, callback) {
-  var mask = this.bitMask(bit, bitLength);
-  
-  this.readBytes(func, 1, function(err, buf) {
-    var bits = (buf[0] & mask) >> (1 + bit - bitLength);
-    callback(err, bits);
-  });
-};
-
-I2cDev.prototype.readBit = function(func, bit, bitLength, callback) {
-  this.readBits(func, bit, 1, callback);
-};
-
-I2cDev.prototype.writeBits = function(func, bit, bitLength, value) {
-  var self = this;
-  self.readBytes(func, 1, function(err, oldValue) {
-    var mask = self.bitMask(bit, bitLength);
-    var newValue = oldValue ^ ((oldValue ^ (value << bit)) & mask);
-    self.writeBytes(func, [newValue], function (err) {
-      if (err) {
-        throw err;
-      }
-    });
-  });
-};
-
-I2cDev.prototype.writeBit = function(func, bit, value) {
-  this.writeBits(func, bit, 1, value);
-};
 
