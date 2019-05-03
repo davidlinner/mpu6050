@@ -5,13 +5,10 @@
  *
  * Added callback to conform to i2c package changes.
  * 2015/02/01 by Roman Stets <romko.stets@gmail.com>
- * @todo make use of i2c.stream
  *
- * Replaced dependence on 'i2c' module by 'raspi-i2c' module
+ * Replaced module 'i2c' by module 'raspi-i2c'
  * 2019/03/15 by David Linner <david.linner@srh.de>
  *
- * Changelog:
- *     XX - ToDo...
  */
 //============================================================================================
 // MPU6050 device I2C library code for Node.js is placed under the MIT license
@@ -36,8 +33,6 @@
 // THE SOFTWARE.
 //================================================================================================
 
-//var i2c = require('i2c');
-
 const raspi = require('raspi');
 const {I2C} = require('raspi-i2c');
 
@@ -52,6 +47,15 @@ function MPU6050(address) {
 MPU6050.ADDRESS_AD0_LOW = 0x68; // address pin low (GND); default for InvenSense evaluation board
 MPU6050.ADDRESS_AD0_HIGH = 0x69; // address pin high (VCC)
 MPU6050.DEFAULT_ADDRESS = MPU6050.ADDRESS_AD0_LOW;
+
+
+MPU6050.CLOCK_INTERNAL           = 0x00;
+MPU6050.CLOCK_PLL_XGYRO          = 0x01;
+MPU6050.CLOCK_PLL_YGYRO          = 0x02;
+MPU6050.CLOCK_PLL_ZGYRO          = 0x03;
+MPU6050.CLOCK_PLL_EXT32K         = 0x04;
+MPU6050.CLOCK_PLL_EXT19M         = 0x05;
+MPU6050.CLOCK_KEEP_RESET         = 0x07;
 
 /**
  * Power on and prepare for general usage.
